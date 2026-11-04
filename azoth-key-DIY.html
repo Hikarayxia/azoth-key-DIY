@@ -15,6 +15,9 @@
 .shiny-control .switch{pointer-events:none}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 
+.move-slot input[type=search]{font-size:14px}
+@media(max-width:730px){.move-slot input[type=search]{font-size:16px}}
+
 /* Conversion details share the same restrained blue-grey and teal palette. */
 .target-field{margin:18px 0 0}.target-field label{font-size:11px}.compatibility{display:block;min-width:0;font-size:11px;line-height:1.8;color:var(--ink)}.compatibility h3{font-size:13px;margin-bottom:9px}.target-actual{background:var(--teal-pale);border-left:3px solid var(--teal);padding:10px 12px;font-weight:600;color:var(--teal-dark);border-radius:0 8px 8px 0}.target-summary{display:grid;grid-template-columns:70px minmax(0,1fr);gap:7px 10px;margin:14px 0}.target-summary dt{color:var(--muted)}.target-summary dd{margin:0;overflow-wrap:anywhere}.conversion-note{font-size:10px;color:var(--muted);margin:10px 0}.conversion-changes{width:100%;table-layout:fixed;border-collapse:collapse;font-size:10px;line-height:1.7}.conversion-changes caption{text-align:left;font-weight:600;padding:5px 0}.conversion-changes th,.conversion-changes td{padding:7px 6px;text-align:left;border-bottom:1px solid var(--line);overflow-wrap:anywhere;vertical-align:top}.conversion-changes th{background:#f2f7f9;color:#557887}.compat-reason{color:#996428;background:#fff5e8;padding:10px 12px;border-radius:8px}.draft-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 2px 0;font-size:11px;color:var(--muted)}#draftState.error{color:var(--danger)}.draft-bar .text-button{min-height:44px}.share-button{grid-column:1/-1}.mobile-actions{display:none}#keyResult{scroll-margin-top:18px}.stat-row input{min-height:44px}.button{min-height:44px}.chip{min-height:44px}.tab{min-height:44px}.close-button{width:44px;height:44px}
 @media(max-width:730px){body{padding-bottom:calc(86px + env(safe-area-inset-bottom))}.mobile-actions{display:flex;position:fixed;z-index:10;left:0;right:0;bottom:0;gap:9px;padding:12px 15px calc(12px + env(safe-area-inset-bottom));border-top:1px solid #ccdde4;background:#f7fbfdf5;box-shadow:0 -4px 20px #21475b0c;backdrop-filter:blur(12px)}.mobile-actions .button{flex:1;min-width:0;min-height:48px;padding:10px 12px;font-size:12px}.preview-column{grid-template-columns:1fr}.pokemon-card{padding-top:15px}.sprite-stage{height:125px}.sprite-stage img{width:118px;height:118px}.orbit{width:118px;height:118px}.orbit:before{inset:14px}.orbit:after{inset:46px}.preview-stats{grid-template-columns:repeat(6,minmax(0,1fr));padding:13px 0;margin-top:13px}.preview-stat{display:block;text-align:center}.preview-stat span{font-size:8px}.stage-spark{top:10px;right:25%}.preview-ot{padding:10px 0}.key-actions .button{min-height:44px}.draft-bar{align-items:flex-start;font-size:10px}.draft-bar p{padding-top:10px}.keyboard-hint{display:none}.editor-footer .primary{min-height:44px}.stat-row input{font-size:16px}.key-card{padding:20px}#keyResult{scroll-margin-top:15px}}
@@ -59,7 +62,6 @@
     </div>
     <div class="panel" id="panel-moves" role="tabpanel" aria-labelledby="tab-moves" hidden>
      <div class="panel-heading"><div><h3>四个招式，自由搭配</h3><p>选择水银 HOME 格式中可以保存的招式。</p></div><button id="suggestMoves" class="chip" type="button">按等级填入</button></div>
-     <div class="field"><label for="moveSearch">搜索招式</label><div class="search-wrap"><span aria-hidden="true">⌕</span><input id="moveSearch" type="search" placeholder="输入招式名称或编号" autocomplete="off"></div></div>
      <div class="move-grid" id="moveInputs"></div>
      <label class="check-row" for="ppMax"><input type="checkbox" id="ppMax"><span>四个招式的 PP 提升到最大</span></label><p id="ppNote" class="field-note"></p>
      <div class="info-note">“按等级填入”来自内嵌的升级招式表。手动搭配不会校验全部学习途径，不代表游戏内合法性认证。</div>
@@ -724,13 +726,15 @@ window.AZOTH_HOME_DECOMP_DATA={"schema":1,"format":"BAG16-PC18-v1","forward":{"s
   if(!all.some(([i])=>Number(i)===id))all.unshift([String(id),engine.data.items[id]||'未知道具']);
   options($('heldItem'),all.map(([i,n])=>({value:i,label:Number(i)===0?'无携带物':n+' · #'+i})),id);
  }
- function moveOptions(){
-  const q=$('moveSearch').value.trim().toLowerCase(),all=Object.entries(engine.data.moves).filter(([id,n])=>Number(id)>0&&Number(id)<=1023&&n&&(!q||id.includes(q)||String(n).toLowerCase().includes(q)));
-  for(let i=0;i<4;i++){
+ function moveOptions(index){
+  for(const i of index===undefined?[0,1,2,3]:[index]){
+   const q=$('moveSearch-'+i).value.trim().toLowerCase(),all=Object.entries(engine.data.moves).filter(([id,n])=>Number(id)>0&&Number(id)<=1023&&n&&(!q||id.includes(q)||String(n).toLowerCase().includes(q)));
    const id=Number(state.form.moves[i]),list=[['0','无招式'],...all];if(id&&!list.some(([v])=>Number(v)===id))list.splice(1,0,[String(id),engine.data.moves[id]||'未知招式']);
    options($('move-'+i),list.map(([v,n])=>({value:v,label:Number(v)?n+' · #'+v:n})),id);
+   const note=$('moveSearchNote-'+i);note.textContent=q?(all.length?'找到 '+all.length+' 项招式。':'未找到匹配招式，已保留当前选择。'):'';note.hidden=!q;
   }updatePp();
  }
+ function clearSearches(){document.querySelectorAll('.editor input[type="search"]').forEach(input=>{input.value='';});}
  function updatePp(){
   for(let i=0;i<4;i++){const id=Number(state.form.moves[i]),base=Number(engine.data.movePp[id]||0),stage=(Number(state.form.ppBonuses)>>(i*2))&3;$('move-pp-'+i).textContent=id?'PP '+Math.floor(base*(5+stage)/5)+' / 基础 '+base:'留空此招式槽位';}
   $('ppNote').textContent=state.form.ppBonuses!==0&&state.form.ppBonuses!==255?'当前保留原密钥的分项 PP 提升值；切换上方开关将统一设置。':'';
@@ -821,7 +825,7 @@ window.AZOTH_HOME_DECOMP_DATA={"schema":1,"format":"BAG16-PC18-v1","forward":{"s
  }
  function loadKey(key){
   const parsed=engine.parseKey(key);state.form=parsed.form;state.baseRaw=parsed.raw;
-  for(const id of ['speciesSearch','itemSearch','moveSearch'])$(id).value='';fillForm();showResult(parsed,true);saveDraft();return parsed;
+  clearSearches();fillForm();showResult(parsed,true);saveDraft();return parsed;
  }
  function saveBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
  function filename(ext){const name=engine.data.species[state.form.species].name.replace(/[<>:"/\\|?*\x00-\x1f]/g,'');return 'azoth-key-DIY_'+name+'_Lv'+state.form.level+'.'+ext;}
@@ -834,14 +838,16 @@ window.AZOTH_HOME_DECOMP_DATA={"schema":1,"format":"BAG16-PC18-v1","forward":{"s
   const stat=document.createElement('div');stat.className='preview-stat';const name=document.createElement('span');name.textContent=engine.statNames[k];const number=document.createElement('strong');number.id='preview-stat-'+k;stat.append(name,number);$('previewStats').append(stat);
  }
  for(let i=0;i<4;i++){
-  const slot=document.createElement('div');slot.className='move-slot';const label=document.createElement('label');label.htmlFor='move-'+i;label.textContent='招式 ';const index=document.createElement('span');index.className='move-index';index.textContent=String(i+1).padStart(2,'0');label.append(index);const select=document.createElement('select');select.id='move-'+i;const pp=document.createElement('p');pp.id='move-pp-'+i;pp.className='move-pp';slot.append(label,select,pp);$('moveInputs').append(slot);
+  const slot=document.createElement('div');slot.className='move-slot';const label=document.createElement('label');label.htmlFor='move-'+i;label.textContent='招式 ';const index=document.createElement('span');index.className='move-index';index.textContent=String(i+1).padStart(2,'0');label.append(index);
+  const searchWrap=document.createElement('div');searchWrap.className='search-wrap';const icon=document.createElement('span');icon.textContent='⌕';icon.setAttribute('aria-hidden','true');const search=document.createElement('input');search.id='moveSearch-'+i;search.type='search';search.placeholder='搜索名称或编号';search.autocomplete='off';search.setAttribute('aria-label','搜索招式 '+(i+1));search.setAttribute('aria-describedby','moveSearchNote-'+i);search.addEventListener('input',()=>moveOptions(i));searchWrap.append(icon,search);
+  const select=document.createElement('select');select.id='move-'+i;const note=document.createElement('p');note.id='moveSearchNote-'+i;note.className='field-note';note.setAttribute('role','status');note.hidden=true;const pp=document.createElement('p');pp.id='move-pp-'+i;pp.className='move-pp';slot.append(label,searchWrap,select,note,pp);$('moveInputs').append(slot);
  }
  const natureStats=['攻击','防御','速度','特攻','特防'];options($('nature'),engine.natures.map((n,i)=>{const up=Math.floor(i/5),down=i%5;return {value:i,label:n+(up===down?'（均衡）':'（'+natureStats[up]+'↑ '+natureStats[down]+'↓）')};}),state.form.nature);
  $('speciesCount').textContent=engine.speciesList.length+' 项可选';
  document.querySelector('.editor').addEventListener('input',handleChange);
  document.querySelector('.editor').addEventListener('change',e=>{if(e.target.tagName==='SELECT')handleChange(e);});
  // SELECT emits input as well as change in modern browsers; assigning the same value is harmless.
- $('speciesSearch').addEventListener('input',speciesOptions);$('itemSearch').addEventListener('input',itemOptions);$('moveSearch').addEventListener('input',moveOptions);
+ $('speciesSearch').addEventListener('input',speciesOptions);$('itemSearch').addEventListener('input',itemOptions);
  document.querySelectorAll('[data-tab]').forEach(b=>{b.addEventListener('click',()=>switchTab(b.dataset.tab));b.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const tabs=[...document.querySelectorAll('[data-tab]')],i=tabs.indexOf(b),next=e.key==='Home'?0:e.key==='End'?3:(i+(e.key==='ArrowRight'?1:3))%4;switchTab(tabs[next].dataset.tab);tabs[next].focus();});});
  function patchStats(action){action();for(const k of displayKeys){$('iv-'+k).value=state.form.ivs[k];$('ev-'+k).value=state.form.evs[k];}changed();}
  $('all31').onclick=()=>patchStats(()=>{for(const k of displayKeys)state.form.ivs[k]=31;});
@@ -850,7 +856,7 @@ window.AZOTH_HOME_DECOMP_DATA={"schema":1,"format":"BAG16-PC18-v1","forward":{"s
  $('specialPreset').onclick=()=>evPreset('spa');$('attackPreset').onclick=()=>evPreset('atk');$('clearEv').onclick=()=>evPreset(null);
  $('suggestMoves').onclick=()=>{state.form.moves=engine.suggestMoves(state.form.species,Number(state.form.level)||1);moveOptions();changed();};
  $('generate').onclick=generate;document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'&&!$('importDialog').open){e.preventDefault();generate();}});
- $('reset').onclick=()=>{state.form=engine.defaults();state.baseRaw=null;state.targetFormat='fc';$('targetFormat').value='fc';for(const id of ['speciesSearch','itemSearch','moveSearch'])$(id).value='';fillForm();invalidate();$('keyState').textContent='尚未生成';status('已重新开始，设定完成后生成密钥。');switchTab('basic',false);draftStatus(draft.clear());};
+ $('reset').onclick=()=>{state.form=engine.defaults();state.baseRaw=null;state.targetFormat='fc';$('targetFormat').value='fc';clearSearches();fillForm();invalidate();$('keyState').textContent='尚未生成';status('已重新开始，设定完成后生成密钥。');switchTab('basic',false);draftStatus(draft.clear());};
  $('clearDraft').onclick=()=>draftStatus(draft.clear());
  $('targetFormat').onchange=()=>{state.targetFormat=$('targetFormat').value;renderReport();saveDraft();};
  $('mobileGenerate').onclick=generate;
